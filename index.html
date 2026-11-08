@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบรายงานสภาพจราจร Real-time</title>
+    <!-- 📌 ดึงระบบ API ปลดล็อกแผนที่จาก Longdo Map ตัวจริง -->
+    <script src="https://longdo.com"></script>
+    <style>
+        body { font-family: sans-serif; margin: 0; padding: 0; background: #f4f6f9; }
+        header { background: #2c3e50; color: white; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; }
+        .container { display: flex; height: calc(100vh - 64px); }
+        #sidebar { width: 300px; background: white; padding: 20px; overflow-y: auto; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
+        #map { flex: 1; height: 100%; }
+        .card { background: #fff; border-left: 5px solid #e74c3c; padding: 15px; margin-bottom: 15px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .status-clear { border-left-color: #2ecc71; }
+    </style>
+</head>
+<body>
+
+    <header>🚗 LIVE TRAFFIC: รายงานสภาพจราจร ปราจีนบุรี</header>
+    
+    <div class="container">
+        <div id="sidebar">
+            <h2>⚠️ ข่าวจราจรล่าสุด</h2>
+            <div class="card">
+                <h3>แยกสามทหาร</h3>
+                <p>รถติดขัดหนาแน่น เคลื่อนตัวได้ช้าสลับหยุดนิ่ง</p>
+            </div>
+            <div class="card status-clear">
+                <h3>ถนนสาย 304 ปราจีนบุรี</h3>
+                <p>การจราจรยังคล่องตัว ทำความเร็วได้ดี</p>
+            </div>
+        </div>
+        <div id="map"></div>
+    </div>
+
+    <!-- 🛠️ ชุดคำสั่งสั่งเปิดแผนที่และปักหมุดสด -->
+    <script>
+        window.onload = function() {
+            var map = new longdo.Map({
+                placeholder: document.getElementById('map')
+            });
+            
+            // พิกัดแยกสามทหาร ปราจีนบุรี
+            var longitude = 101.3934; 
+            var latitude = 13.9824;   
+
+            // สั่งให้แผนที่วิ่งไปจุดโฟกัส
+            map.location({ lon: longitude, lat: latitude }, true);
+            map.zoom(14, true);
+            
+            // 🚥 เปิดแถบเส้นสีจราจรรถติด แดง/เหลือง/เขียว จริงย้อนหลังและปัจจุบัน
+            map.Layers.add(longdo.Layer.Traffic); 
+
+            // 📍 คำสั่งปักหมุดแจ้งเหตุตรงแยกสามทหาร (คนรายงานสามารถเชื่อมจุดตรงนี้ได้ในอนาคต)
+            var marker = new longdo.Marker({ lon: longitude, lat: latitude }, {
+                title: 'รายงานจากผู้ใช้: แยกสามทหาร',
+                detail: 'มีรายงานรถหนาแน่นเคลื่อนตัวช้าสลับหยุดนิ่ง'
+            });
+            map.Overlays.add(marker);
+        };
+    </script>
+</body>
+</html>
