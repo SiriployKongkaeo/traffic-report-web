@@ -3,29 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบรายงานสภาพจราจร Real-time</title>
+    <title>ระบบรายงานสภาพจราจร Real-time (Longdo Map)</title>
     
     <!-- Longdo Map API Script -->
     <script src="https://api.longdo.com/map/?key=77f4345df6322238f559add61576d416"></script>
 
-    <!-- Firebase SDK (ใช้สำหรับแชร์ข้อมูลรายงานแบบ Real-time ข้ามเครื่อง) -->
+    <!-- Firebase SDK สำหรับแชร์ข้อมูลแบบ Real-time -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
     <style>
         * { box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background: #f4f6f9; }
-        header { background: #2c3e50; color: white; padding: 15px; text-align: center; font-size: 20px; font-weight: bold; }
-        .container { display: flex; height: calc(100vh - 56px); }
+        html, body { width: 100%; height: 100%; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f6f9; }
+        header { background: #2c3e50; color: white; padding: 15px; text-align: center; font-size: 20px; font-weight: bold; height: 56px; }
+        .container { display: flex; height: calc(100vh - 56px); width: 100vw; overflow: hidden; }
         
-        #sidebar { width: 350px; background: white; padding: 20px; overflow-y: auto; box-shadow: 2px 0 5px rgba(0,0,0,0.1); z-index: 10; display: flex; flex-direction: column; }
+        #sidebar { width: 350px; background: white; padding: 20px; overflow-y: auto; box-shadow: 2px 0 5px rgba(0,0,0,0.1); z-index: 10; display: flex; flex-direction: column; flex-shrink: 0; }
         #map-wrapper { flex: 1; height: 100%; position: relative; }
         #map { width: 100%; height: 100%; background-color: #e5e3df; }
         
         /* กล่องค้นหาบนแผนที่ */
-        .search-box { position: absolute; top: 15px; left: 15px; z-index: 999; display: flex; gap: 5px; background: white; padding: 6px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); width: calc(100% - 30px); max-width: 400px; }
-        .search-box input { flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; outline: none; font-size: 14px; }
-        .search-box button { background: #2c3e50; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .search-container { position: absolute; top: 15px; left: 15px; z-index: 999; width: calc(100% - 30px); max-width: 380px; }
+        .search-box { display: flex; gap: 5px; background: white; padding: 6px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
+        .search-box input { flex: 1; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; outline: none; font-size: 14px; }
+        .search-box button { background: #2c3e50; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        
+        .search-results { background: white; margin-top: 5px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); max-height: 250px; overflow-y: auto; display: none; }
+        .search-item { padding: 10px 14px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 13px; }
+        .search-item:hover { background: #f0f4f8; }
+        .search-item .name { font-weight: bold; color: #2c3e50; font-size: 14px; }
+        .search-item .address { color: #777; font-size: 11px; margin-top: 2px; }
 
         .form-group { margin-bottom: 12px; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; color: #333; }
@@ -33,31 +40,38 @@
         
         .btn-submit { width: 100%; padding: 12px; background: #e74c3c; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 15px; cursor: pointer; }
         
-        .card { background: #fff; border-left: 5px solid #e74c3c; padding: 12px; margin-bottom: 12px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer; }
+        .card { background: #fff; border-left: 5px solid #e74c3c; padding: 12px; margin-bottom: 12px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.1s; }
+        .card:hover { transform: translateY(-2px); }
         .card.status-clear { border-left-color: #2ecc71; }
         .card.status-accident { border-left-color: #e67e22; }
-        .card h3 { margin: 0 0 5px 0; font-size: 15px; color: #2c3e50; }
-        .card p { margin: 0; font-size: 13px; color: #555; }
-        .card .meta { font-size: 11px; color: #888; margin-top: 5px; display: flex; justify-content: space-between; }
+        .card h3 { margin: 0 0 5px 0; font-size: 15px; color: #2c3e50; display: flex; justify-content: space-between; align-items: center; }
+        .card p { margin: 0; font-size: 13px; color: #555; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .card .meta { font-size: 11px; color: #888; margin-top: 6px; display: flex; justify-content: space-between; }
+        
+        .badge { font-size: 11px; padding: 2px 6px; border-radius: 4px; color: white; font-weight: normal; }
+        .badge.jam { background: #e74c3c; }
+        .badge.clear { background: #2ecc71; }
+        .badge.accident { background: #e67e22; }
 
         #status-bar { position: absolute; bottom: 20px; left: 15px; z-index: 999; background: rgba(0,0,0,0.8); color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; display: flex; align-items: center; gap: 6px; }
         .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
         .dot.green { background: #2ecc71; }
         .dot.yellow { background: #f1c40f; }
+        .empty-news { font-size: 13px; color: #888; text-align: center; padding: 20px 0; }
 
         @media (max-width: 768px) {
             .container { flex-direction: column-reverse; }
-            #sidebar { width: 100%; height: 55%; }
-            #map-wrapper { width: 100%; height: 45%; }
+            #sidebar { width: 100%; height: 50%; }
+            #map-wrapper { width: 100%; height: 50%; }
         }
     </style>
 </head>
 <body>
 
-    <header>🚗 REALTIME TRAFFIC REPORT</header>
+    <header>🚗 REALTIME TRAFFIC REPORT (LONGDO MAP)</header>
     
     <div class="container">
-        <!-- Sidebar รายงานและแบบฟอร์ม -->
+        <!-- Sidebar แบบฟอร์มและรายการข่าว -->
         <div id="sidebar">
             <form id="trafficForm" onsubmit="submitReport(event)">
                 <h3 style="margin-top:0; font-size:16px; color:#2c3e50;">📢 รายงานสภาพจราจร</h3>
@@ -67,7 +81,7 @@
                 </div>
                 <div class="form-group">
                     <label>📍 ชื่อสถานที่ / ถนน *</label>
-                    <input type="text" id="locationName" placeholder="เช่น แยกสามทหาร" required>
+                    <input type="text" id="locationName" placeholder="เช่น ทับลาน, แยกสามทหาร" required>
                 </div>
                 <div class="form-group">
                     <label>🚦 สถานะการจราจร</label>
@@ -79,7 +93,7 @@
                 </div>
                 <div class="form-group">
                     <label>📝 รายละเอียดสถานการณ์ *</label>
-                    <textarea id="detail" rows="2" placeholder="เช่น รถติดขัดเคลื่อนตัวช้า" required></textarea>
+                    <textarea id="detail" rows="2" placeholder="เช่น รถหนาแน่นเคลื่อนตัวช้า" required></textarea>
                 </div>
 
                 <button type="submit" class="btn-submit">📌 ปักหมุดรายงานตรงนี้</button>
@@ -87,18 +101,20 @@
 
             <hr style="margin: 15px 0; border: 0; border-top: 1px solid #eee;">
             
-            <h3 style="font-size: 16px; margin-top: 0; color: #2c3e50;">⚠️ ข่าวจราจรล่าสุด (กดเพื่อดูบนแผนที่)</h3>
+            <h3 style="font-size: 16px; margin-top: 0; color: #2c3e50;">⚠️ รายงานล่าสุด</h3>
             <div id="news-container">
-                <!-- รายงานจากผู้ใช้จะถูกเพิ่มเข้ามาตรงนี้ -->
+                <div id="no-data-msg" class="empty-news">ยังไม่มีรายงานสภาพจราจรในขณะนี้</div>
             </div>
         </div>
         
         <!-- แผนที่ + ช่องค้นหา -->
         <div id="map-wrapper">
-            <!-- ช่องค้นหาสถานที่ -->
-            <div class="search-box">
-                <input type="text" id="searchInput" placeholder="🔍 พิมพ์ชื่อสถานที่ค้นหา..." onkeypress="if(event.key==='Enter') searchLocation()">
-                <button onclick="searchLocation()">ค้นหา</button>
+            <div class="search-container">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="🔍 พิมพ์ค้นหา เช่น ทับลาน, 304..." oninput="handleSearchInput()">
+                    <button onclick="triggerSearch()">ค้นหา</button>
+                </div>
+                <div class="search-results" id="searchResults"></div>
             </div>
 
             <div id="status-bar">
@@ -112,12 +128,15 @@
     <script>
         var map;
         var userMarker = null;
+        var searchMarker = null;
         var activeLat = 14.0509;
         var activeLon = 101.3717;
-        var reportsData = []; // เก็บรายงานทั้งหมด
+        var allReports = [];
+        var searchTimeout = null;
 
-        // --- 1. การตั้งค่า FIREBASE (ใส่ Config ของคุณเพื่อแชร์ข้อมูลข้ามเครื่อง) ---
-        /*
+        // ==========================================
+        // 🔑 ใส่ Config จาก Firebase ของคุณตรงนี้
+        // ==========================================
         const firebaseConfig = {
             apiKey: "YOUR_API_KEY",
             authDomain: "YOUR_PROJECT.firebaseapp.com",
@@ -127,9 +146,17 @@
             messagingSenderId: "...",
             appId: "..."
         };
-        firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
-        */
+
+        // เริ่มต้นใช้งาน Firebase
+        var database = null;
+        try {
+            if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+                firebase.initializeApp(firebaseConfig);
+                database = firebase.database();
+            }
+        } catch(e) {
+            console.error("Firebase init failed:", e);
+        }
 
         function checkAndInitMap() {
             if (typeof longdo !== 'undefined' && longdo.Map) {
@@ -153,32 +180,114 @@
             } catch(e) {}
 
             startGPSTracking();
-            listenRealtimeReports(); // โหลดรายงานออนไลน์
+            listenRealtimeDatabase(); // เริ่มดึงข้อมูลรายงานสดจากฐานข้อมูล
         }
 
-        // --- 2. ระบบค้นหาชื่อสถานที่ (Longdo Search API) ---
-        function searchLocation() {
-            var keyword = document.getElementById('searchInput').value.trim();
-            if (!keyword) return;
+        // --- ระบบดึงข้อมูลสดข้ามเครื่องจาก Firebase (ตัดข้อมูลที่เกิน 6 เดือน) ---
+        function listenRealtimeDatabase() {
+            if (!database) return;
 
-            // เรียกระบบค้นหาของ Longdo Map
-            map.Search.search(keyword, {
-                area: 10 // ขอบเขต
-            });
+            database.ref('traffic_reports').on('child_added', function(snapshot) {
+                var rep = snapshot.val();
+                
+                // ตรวจสอบว่าข้อมูลมีอายุไม่เกิน 6 เดือน
+                if (isDataFresh(rep.timestamp)) {
+                    allReports.unshift(rep);
 
-            // ดึงผลลัพธ์แรกและย้ายแผนที่ไป
-            map.Event.bind('search', function(result) {
-                if (result && result.data && result.data.length > 0) {
-                    var firstResult = result.data[0];
-                    map.location({ lon: firstResult.lon, lat: firstResult.lat }, true);
-                    map.zoom(16, true);
+                    // ซ่อนข้อความแจ้งเตือนไม่มีข้อมูล
+                    var emptyMsg = document.getElementById('no-data-msg');
+                    if (emptyMsg) emptyMsg.style.display = 'none';
+
+                    renderReportOnMapAndSidebar(rep);
                 } else {
-                    alert("ไม่พบสถานที่ที่ค้นหา ลองพิมพ์ชื่อให้ชัดเจนขึ้นครับ");
+                    // หากเก่าเกิน 6 เดือน ให้ลบออกจากฐานข้อมูลออนไลน์โดยอัตโนมัติ
+                    snapshot.ref.remove();
                 }
             });
         }
 
-        // --- 3. ระบบติดตาม GPS แม่นยำ ---
+        function isDataFresh(timestamp) {
+            if (!timestamp) return true;
+            var sixMonthsInMs = 6 * 30 * 24 * 60 * 60 * 1000; // 182 วันโดยประมาณ
+            return (Date.now() - timestamp) <= sixMonthsInMs;
+        }
+
+        // --- ระบบ Auto-Suggest ค้นหาขณะพิมพ์บน Longdo Search ---
+        function handleSearchInput() {
+            clearTimeout(searchTimeout);
+            var keyword = document.getElementById('searchInput').value.trim();
+
+            if (keyword.length < 2) {
+                document.getElementById('searchResults').style.display = 'none';
+                return;
+            }
+
+            searchTimeout = setTimeout(function() {
+                triggerSearch();
+            }, 300);
+        }
+
+        function triggerSearch() {
+            var keyword = document.getElementById('searchInput').value.trim();
+            var resultsBox = document.getElementById('searchResults');
+
+            if (!keyword) {
+                resultsBox.style.display = 'none';
+                return;
+            }
+
+            map.Search.search(keyword, { limit: 6 });
+
+            map.Event.bind('search', function(result) {
+                resultsBox.innerHTML = '';
+                var foundMatch = false;
+
+                if (result && result.data && result.data.length > 0) {
+                    resultsBox.style.display = 'block';
+                    foundMatch = true;
+
+                    result.data.forEach(function(item) {
+                        var div = document.createElement('div');
+                        div.className = 'search-item';
+                        div.innerHTML = `
+                            <div class="name">📍 ${escapeHtml(item.name || keyword)}</div>
+                            <div class="address">${escapeHtml(item.address || 'พิกัดแผนที่ Longdo')}</div>
+                        `;
+                        div.onclick = function() {
+                            selectSearchResult(item.lat, item.lon, item.name);
+                        };
+                        resultsBox.appendChild(div);
+                    });
+                }
+
+                var matchedReport = allReports.find(r => r.name.toLowerCase().includes(keyword.toLowerCase()) || r.detail.toLowerCase().includes(keyword.toLowerCase()));
+                if (matchedReport) {
+                    map.location({ lon: matchedReport.lon, lat: matchedReport.lat }, true);
+                    map.zoom(16, true);
+                    document.getElementById('locationName').value = matchedReport.name;
+                } else if (!foundMatch) {
+                    resultsBox.style.display = 'block';
+                    resultsBox.innerHTML = '<div class="search-item" style="color: #999;">ไม่พบสถานที่ ลองพิมพ์ชื่อใหม่อีกครั้งครับ</div>';
+                }
+            });
+        }
+
+        function selectSearchResult(lat, lon, name) {
+            document.getElementById('searchResults').style.display = 'none';
+            document.getElementById('searchInput').value = name;
+            document.getElementById('locationName').value = name;
+            activeLat = lat;
+            activeLon = lon;
+
+            map.location({ lon: lon, lat: lat }, true);
+            map.zoom(16, true);
+
+            if (searchMarker) map.Overlays.remove(searchMarker);
+            searchMarker = new longdo.Marker({ lon: lon, lat: lat }, { title: '📍 ' + name });
+            map.Overlays.add(searchMarker);
+        }
+
+        // --- ระบบติดตาม GPS ---
         function startGPSTracking() {
             var statusText = document.getElementById('status-text');
             var statusDot = document.getElementById('status-dot');
@@ -196,10 +305,7 @@
                     map.location({ lon: activeLon, lat: activeLat }, true);
 
                     if (userMarker) map.Overlays.remove(userMarker);
-                    userMarker = new longdo.Marker(
-                        { lon: activeLon, lat: activeLat },
-                        { title: '📍 ตำแหน่งของคุณ' }
-                    );
+                    userMarker = new longdo.Marker({ lon: activeLon, lat: activeLat }, { title: '📍 ตำแหน่งของคุณ' });
                     map.Overlays.add(userMarker);
                 },
                 function (err) {
@@ -209,70 +315,77 @@
             );
         }
 
-        // --- 4. ส่งรายงาน (บันทึกลง Database) ---
+        // --- การส่งรายงานลง Firebase Realtime Database ---
         function submitReport(e) {
             e.preventDefault();
             
             var reportData = {
+                id: 'rep_' + Date.now(),
                 username: document.getElementById('username').value.trim() || 'ผู้ใช้ทั่วไป',
                 name: document.getElementById('locationName').value.trim(),
                 detail: document.getElementById('detail').value.trim(),
                 status: document.getElementById('trafficStatus').value,
                 lat: activeLat,
                 lon: activeLon,
-                time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+                timestamp: Date.now()
             };
 
-            // หากต่อ Firebase แล้ว ให้ปลดล็อกบรรทัดนี้:
-            // database.ref('traffic_reports').push(reportData);
-
-            // การแสดงผลชั่วคราวในเครื่อง (Local rendering):
-            addReportToMapAndList(reportData);
+            // บันทึกลงฐานข้อมูลออนไลน์
+            if (database) {
+                database.ref('traffic_reports').push(reportData);
+            } else {
+                // กรณีทดสอบแบบยังไม่ใส่ Firebase config
+                allReports.unshift(reportData);
+                var emptyMsg = document.getElementById('no-data-msg');
+                if (emptyMsg) emptyMsg.style.display = 'none';
+                renderReportOnMapAndSidebar(reportData);
+            }
 
             document.getElementById('locationName').value = '';
             document.getElementById('detail').value = '';
-            alert("📢 ส่งรายงานและปักหมุดเรียบร้อยแล้ว!");
+            alert("📢 ส่งรายงานและปักหมุดสำเร็จ!");
         }
 
-        // --- 5. ดึงรายงาน Real-time มาแสดงบนแผนที่ ---
-        function listenRealtimeReports() {
-            // หากต่อ Firebase แล้ว ให้ปลดล็อกบล็อกนี้เพื่อให้คนอื่นเห็นข้อมูลกันและกันได้ทันที:
-            /*
-            database.ref('traffic_reports').on('child_added', function(snapshot) {
-                var data = snapshot.val();
-                addReportToMapAndList(data);
-            });
-            */
-        }
+        function renderReportOnMapAndSidebar(data) {
+            var statusText = 'ติดขัด';
+            if (data.status === 'clear') statusText = 'คล่องตัว';
+            if (data.status === 'accident') statusText = 'อุบัติเหตุ';
 
-        function addReportToMapAndList(data) {
-            // ปักหมุดบนแผนที่
+            var reportDate = new Date(data.timestamp);
+            var timeString = reportDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.';
+
             var marker = new longdo.Marker(
                 { lon: data.lon, lat: data.lat },
-                { title: data.name, detail: data.detail + ' (โดย: ' + data.username + ')' }
+                { 
+                    title: `📌 [${statusText}] ${data.name}`, 
+                    detail: `${data.detail}\n👤 โดย: ${data.username} (${timeString})` 
+                }
             );
             map.Overlays.add(marker);
 
-            // แสดงการ์ดใน Sidebar
             var newsContainer = document.getElementById('news-container');
             var card = document.createElement('div');
             var cardClass = 'card';
-            if (data.status === 'clear') cardClass += ' status-clear';
-            if (data.status === 'accident') cardClass += ' status-accident';
+            var badgeClass = 'jam';
+            
+            if (data.status === 'clear') { cardClass += ' status-clear'; badgeClass = 'clear'; }
+            if (data.status === 'accident') { cardClass += ' status-accident'; badgeClass = 'accident'; }
             
             card.className = cardClass;
             card.onclick = function() {
-                // เมื่อกดที่การ์ด ให้ย้ายแผนที่ไปจุดนั้น
                 map.location({ lon: data.lon, lat: data.lat }, true);
                 map.zoom(17, true);
             };
 
             card.innerHTML = `
-                <h3>📍 ${escapeHtml(data.name)}</h3>
+                <h3>
+                    <span>${escapeHtml(data.name)}</span>
+                    <span class="badge ${badgeClass}">${statusText}</span>
+                </h3>
                 <p>${escapeHtml(data.detail)}</p>
                 <div class="meta">
                     <span>ผู้รายงาน: ${escapeHtml(data.username)}</span>
-                    <span>${data.time} น.</span>
+                    <span>${timeString}</span>
                 </div>
             `;
             newsContainer.insertBefore(card, newsContainer.firstChild);
@@ -281,6 +394,12 @@
         function escapeHtml(text) {
             return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         }
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.search-container')) {
+                document.getElementById('searchResults').style.display = 'none';
+            }
+        });
 
         window.onload = checkAndInitMap;
     </script>
