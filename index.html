@@ -25,6 +25,24 @@
     
     <div class="container">
         <div id="sidebar">
+            <form id="trafficForm" onsubmit="submitReport(event)" style="margin-top: 15px;">
+                <div class="form-group" style="margin-bottom: 15px; padding: 10px; background: #edf2f7; border-radius: 4px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">🔑 ลงชื่อเข้าใช้ระบบ</label>
+                    <input type="text" id="username" placeholder="พิมพ์ชื่อผู้ใช้งานของคุณ" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;">
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">📍 ชื่อสถานที่ / ชื่อถนน</label>
+                    <input type="text" id="locationName" placeholder="เช่น แยกสามทหาร" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">📝 รายละเอียดสถานการณ์</label>
+                    <textarea id="detail" rows="2" placeholder="เช่น รถติดขัดเคลื่อนตัวช้า" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" required></textarea>
+                </div>
+                <button type="submit" style="width: 100%; padding: 10px; background: #e74c3c; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">
+                    📢 ส่งรายงานและปักหมุด
+                </button>
+            </form>
+            <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
             <h2>⚠️ ข่าวจราจรล่าสุด</h2>
             <div class="card">
                 <h3>แยกสามทหาร</h3>
@@ -41,18 +59,34 @@
     </div>
 
     <script>
+        var map;
         function init() {
-    var map = new longdo.Map({
-        placeholder: document.getElementById('map'),
-        layer: [
-            longdo.Layers.GRAY_EN,
-            longdo.Layers.TRAFFIC
-        ],
-        zoom: 14,
-        lastView: false
-    });
-    map.location({ lon: 101.3934, lat: 13.9824 }, true);
-}
+            map = new longdo.Map({
+                placeholder: document.getElementById('map'),
+                layer: [
+                    longdo.Layers.GRAY_EN,
+                    longdo.Layers.TRAFFIC
+                ],
+                zoom: 14,
+                lastView: false
+            });
+            map.location(longdo.LocationMode.Geolocation, true);
+        }
+        function submitReport(e) {
+            e.preventDefault();
+            
+            var name = document.getElementById('locationName').value;
+            var detail = document.getElementById('detail').value;
+            var currentLon = map.location().lon;
+            var currentLat = map.location().lat;
+            var marker = new longdo.Marker({ lon: currentLon, lat: currentLat }, {
+                title: name,
+                detail: detail
+            });
+            map.Overlays.add(marker);
+            document.getElementById('trafficForm').reset();
+            alert("ปักหมุดรายงานจราจรตรงพิกัดของคุณเรียบร้อยแล้ว!");
+        }
     </script>
 </body>
 </html>
