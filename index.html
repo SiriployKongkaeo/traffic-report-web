@@ -6,8 +6,8 @@
     <title>ระบบรายงานสภาพจราจร Real-time</title>
     
     <!-- เรียกใช้ระบบแผนที่ฟรี Leaflet (ไม่ต้องใช้ Key ดึงข้อมูลได้ 100%) -->
-    <link rel="stylesheet" href="https://unpkg.com" />
-    <script src="https://unpkg.com"></script>
+    <link rel="stylesheet" href="https://longdo.com" />
+  <script src="https://api.longdo.com/map/?key=77f4345df6322238f559add61576d416"></script>
 
     <style>
         body { font-family: sans-serif; margin: 0; padding: 0; background: #f4f6f9; }
@@ -19,9 +19,9 @@
         .status-clear { border-left-color: #2ecc71; }
     </style>
 </head>
-<body>
+<body onload="init();">
 
-    <header>🚗 LIVE TRAFFIC: รายงานสภาพจราจร ปราจีนบุรี</header>
+    <header>🚗 REALTIME TRAFFIC: รายงานสภาพจราจร ปราจีนบุรี</header>
     
     <div class="container">
         <div id="sidebar">
@@ -41,19 +41,18 @@
     </div>
 
     <script>
-        window.onload = function() {
-            // 1. สั่งเปิดแผนที่ ส่องไปที่พิกัด แยกสามทหาร ปราจีนบุรี (ลติจูด 13.9824, ลองจิจูด 101.3934)
-            var map = L.map('map').setView([13.9824, 101.3934], 14);
-
-            // 2. ดึงภาพแผนที่สาธารณะมาแสดงผล
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors'
-            }).addTo(map);
-
-            // 3. 📍 คำสั่งปักหมุดแจ้งเหตุสีแดง (ถ้าคนอัปเดตระบบ ข้อมูลจะมาขึ้นตรงนี้ได้เลย)
-            var marker = L.marker([13.9824, 101.3934]).addTo(map);
-            marker.bindPopup("<b>รายงานเหตุ: แยกสามทหาร</b><br>รถติดขัดหนาแน่นเคลื่อนตัวช้า").openPopup();
-        };
+        function init() {
+    var map = new longdo.Map({
+        placeholder: document.getElementById('map'),
+        layer: [
+            longdo.Layers.GRAY_EN,
+            longdo.Layers.TRAFFIC
+        ],
+        zoom: 14,
+        lastView: false
+    });
+    map.location({ lon: 101.3934, lat: 13.9824 }, true);
+}
     </script>
 </body>
 </html>
