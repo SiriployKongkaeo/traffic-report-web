@@ -5,88 +5,224 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบรายงานสภาพจราจร Real-time</title>
     
-    <!-- เรียกใช้ระบบแผนที่ฟรี Leaflet (ไม่ต้องใช้ Key ดึงข้อมูลได้ 100%) -->
-    <link rel="stylesheet" href="https://longdo.com" />
-  <script src="https://api.longdo.com/map/?key=77f4345df6322238f559add61576d416"></script>
+    <!-- Longdo Map API Script -->
+    <script src="https://api.longdo.com/map/?key=77f4345df6322238f559add61576d416"></script>
 
     <style>
-        body { font-family: sans-serif; margin: 0; padding: 0; background: #f4f6f9; }
-        header { background: #2c3e50; color: white; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; }
-        .container { display: flex; height: calc(100vh - 64px); }
-        #sidebar { width: 300px; background: white; padding: 20px; overflow-y: auto; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
-        #map { flex: 1; height: 100%; background-color: #eee; }
-        .card { background: #fff; border-left: 5px solid #e74c3c; padding: 15px; margin-bottom: 15px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .status-clear { border-left-color: #2ecc71; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background: #f4f6f9; }
+        header { background: #2c3e50; color: white; padding: 15px; text-align: center; font-size: 22px; font-weight: bold; }
+        .container { display: flex; height: calc(100vh - 60px); }
+        
+        #sidebar { width: 340px; background: white; padding: 20px; overflow-y: auto; box-shadow: 2px 0 5px rgba(0,0,0,0.1); z-index: 10; display: flex; flex-direction: column; }
+        #map-wrapper { flex: 1; height: 100%; position: relative; }
+        #map { width: 100%; height: 100%; background-color: #e5e3df; }
+        
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; color: #333; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+        
+        .btn-submit { width: 100%; padding: 12px; background: #e74c3c; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 15px; cursor: pointer; }
+        
+        .card { background: #fff; border-left: 5px solid #e74c3c; padding: 12px; margin-bottom: 12px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .card.status-clear { border-left-color: #2ecc71; }
+        .card.status-accident { border-left-color: #e67e22; }
+        .card h3 { margin: 0 0 5px 0; font-size: 16px; color: #2c3e50; }
+        .card p { margin: 0; font-size: 13px; color: #555; }
+        .card .meta { font-size: 11px; color: #888; margin-top: 5px; }
+
+        #status-bar { position: absolute; top: 20px; left: 20px; z-index: 999; background: rgba(0,0,0,0.85); color: white; padding: 8px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+        .dot.yellow { background: #f1c40f; }
+        .dot.green { background: #2ecc71; }
+        .dot.red { background: #e74c3c; }
+
+        @media (max-width: 768px) {
+            .container { flex-direction: column-reverse; }
+            #sidebar { width: 100%; height: 50%; }
+            #map-wrapper { width: 100%; height: 50%; }
+        }
     </style>
 </head>
-<body onload="init();">
+<body>
 
-    <header>🚗 REALTIME TRAFFIC: รายงานสภาพจราจร ปราจีนบุรี</header>
+    <header>🚗 REALTIME TRAFFIC: รายงานสภาพจราจร</header>
     
     <div class="container">
         <div id="sidebar">
-            <form id="trafficForm" onsubmit="submitReport(event)" style="margin-top: 15px;">
-                <div class="form-group" style="margin-bottom: 15px; padding: 10px; background: #edf2f7; border-radius: 4px;">
-                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">🔑 ลงชื่อเข้าใช้ระบบ</label>
-                    <input type="text" id="username" placeholder="พิมพ์ชื่อผู้ใช้งานของคุณ" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;">
+            <form id="trafficForm" onsubmit="submitReport(event)">
+                <div class="form-group">
+                    <label>🔑 ชื่อผู้รายงาน</label>
+                    <input type="text" id="username" placeholder="พิมพ์ชื่อผู้ใช้งานของคุณ">
                 </div>
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">📍 ชื่อสถานที่ / ชื่อถนน</label>
-                    <input type="text" id="locationName" placeholder="เช่น แยกสามทหาร" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" required>
+                <div class="form-group">
+                    <label>📍 ชื่อสถานที่ / ชื่อถนน *</label>
+                    <input type="text" id="locationName" placeholder="เช่น แยกสามทหาร" required>
                 </div>
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">📝 รายละเอียดสถานการณ์</label>
-                    <textarea id="detail" rows="2" placeholder="เช่น รถติดขัดเคลื่อนตัวช้า" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" required></textarea>
+                <div class="form-group">
+                    <label>🚦 สถานะการจราจร</label>
+                    <select id="trafficStatus">
+                        <option value="jam">🔴 ติดขัดหนาแน่น</option>
+                        <option value="clear">🟢 การจราจรคล่องตัว</option>
+                        <option value="accident">🟠 เกิดอุบัติเหตุ/ซ่อมทาง</option>
+                    </select>
                 </div>
-                <button type="submit" style="width: 100%; padding: 10px; background: #e74c3c; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">
-                    📢 ส่งรายงานและปักหมุด
-                </button>
+                <div class="form-group">
+                    <label>📝 รายละเอียดสถานการณ์ *</label>
+                    <textarea id="detail" rows="2" placeholder="เช่น รถติดขัดเคลื่อนตัวช้า" required></textarea>
+                </div>
+
+                <button type="submit" class="btn-submit">📢 ส่งรายงานและปักหมุด</button>
             </form>
-            <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
-            <h2>⚠️ ข่าวจราจรล่าสุด</h2>
-            <div class="card">
-                <h3>แยกสามทหาร</h3>
-                <p>รถติดขัดหนาแน่น เคลื่อนตัวได้ช้าสลับหยุดนิ่ง</p>
-            </div>
-            <div class="card status-clear">
-                <h3>ถนนสาย 304 ปราจีนบุรี</h3>
-                <p>การจราจรยังคล่องตัว ทำความเร็วได้ดี</p>
+
+            <hr style="margin: 15px 0; border: 0; border-top: 1px solid #eee;">
+            
+            <h2 style="font-size: 18px; margin-top: 0; color: #2c3e50;">⚠️ รายงานจราจรล่าสุด</h2>
+            <div id="news-container">
+                <div class="card">
+                    <h3>แยกสามทหาร</h3>
+                    <p>รถติดขัดหนาแน่น เคลื่อนตัวได้ช้าสลับหยุดนิ่ง</p>
+                    <div class="meta">ผู้รายงาน: ระบบอัตโนมัติ</div>
+                </div>
             </div>
         </div>
         
-        <!-- ช่องแสดงแผนที่ -->
-        <div id="map"></div>
+        <div id="map-wrapper">
+            <div id="status-bar">
+                <span id="status-dot" class="dot yellow"></span>
+                <span id="status-text">กำลังค้นหาสัญญาณ GPS จากอุปกรณ์...</span>
+            </div>
+            <div id="map"></div>
+        </div>
     </div>
 
     <script>
         var map;
-        function init() {
+        var userMarker = null;
+        var activeLat = 14.0509;
+        var activeLon = 101.3717;
+        var watchId = null;
+
+        function checkAndInitMap() {
+            if (typeof longdo !== 'undefined' && longdo.Map) {
+                initMap();
+            } else {
+                setTimeout(checkAndInitMap, 300);
+            }
+        }
+
+        function initMap() {
             map = new longdo.Map({
                 placeholder: document.getElementById('map'),
-                layer: [
-                    longdo.Layers.GRAY_EN,
-                    longdo.Layers.TRAFFIC
-                ],
-                zoom: 14,
+                zoom: 16,
                 lastView: false
             });
-            map.location(longdo.LocationMode.Geolocation, true);
+
+            try {
+                if (longdo.Layers && longdo.Layers.TRAFFIC) {
+                    map.Layers.add(longdo.Layers.TRAFFIC);
+                }
+            } catch(e) {}
+
+            startGPSTracking();
         }
+
+        // ระบบดึงตำแหน่ง GPS แบบล็อคความแม่นยำสูง
+        function startGPSTracking() {
+            var statusText = document.getElementById('status-text');
+            var statusDot = document.getElementById('status-dot');
+
+            if (!navigator.geolocation) {
+                statusText.innerText = "อุปกรณ์ไม่รองรับ GPS";
+                statusDot.className = "dot red";
+                return;
+            }
+
+            var options = {
+                enableHighAccuracy: true, // บังคับเปิดชิป GPS บนมือถือ
+                timeout: 20000,
+                maximumAge: 0
+            };
+
+            // ใช้ watchPosition เพื่อรับค่าพิกัดอัปเดตเรื่อยๆ จนกว่าจะได้จุดที่นิ่งและตรงที่สุด
+            watchId = navigator.geolocation.watchPosition(
+                function (position) {
+                    var lat = position.coords.latitude;
+                    var lon = position.coords.longitude;
+                    var accuracy = position.coords.accuracy;
+
+                    activeLat = lat;
+                    activeLon = lon;
+
+                    statusText.innerText = `จับสัญญาณ GPS ตรงเป๊ะแล้ว (+/- ${Math.round(accuracy)} ม.)`;
+                    statusDot.className = "dot green";
+
+                    // เด้งแผนที่ไปตำแหน่งจริงทันที
+                    map.location({ lon: lon, lat: lat }, true);
+
+                    // สร้าง/ย้ายหมุดตรงจุดปัจจุบัน
+                    if (userMarker) {
+                        map.Overlays.remove(userMarker);
+                    }
+                    userMarker = new longdo.Marker(
+                        { lon: lon, lat: lat },
+                        { title: '📍 ตำแหน่งจริงของคุณ', detail: 'อัปเดตจาก GPS อุปกรณ์' }
+                    );
+                    map.Overlays.add(userMarker);
+                },
+                function (error) {
+                    console.warn("GPS Error:", error);
+                    statusText.innerText = "ไม่สามารถเข้าถึง GPS (โปรดเปิด HTTPS / เปิดสิทธิ์ GPS บนมือถือ)";
+                    statusDot.className = "dot red";
+                },
+                options
+            );
+        }
+
         function submitReport(e) {
             e.preventDefault();
             
-            var name = document.getElementById('locationName').value;
-            var detail = document.getElementById('detail').value;
-            var currentLon = map.location().lon;
-            var currentLat = map.location().lat;
-            var marker = new longdo.Marker({ lon: currentLon, lat: currentLat }, {
-                title: name,
-                detail: detail
-            });
+            var username = document.getElementById('username').value.trim() || 'ผู้ใช้ทั่วไป';
+            var name = document.getElementById('locationName').value.trim();
+            var detail = document.getElementById('detail').value.trim();
+            var status = document.getElementById('trafficStatus').value;
+
+            var marker = new longdo.Marker(
+                { lon: activeLon, lat: activeLat },
+                { title: name, detail: detail + ' (โดย: ' + username + ')' }
+            );
             map.Overlays.add(marker);
-            document.getElementById('trafficForm').reset();
-            alert("ปักหมุดรายงานจราจรตรงพิกัดของคุณเรียบร้อยแล้ว!");
+
+            var newsContainer = document.getElementById('news-container');
+            var card = document.createElement('div');
+            var cardClass = 'card';
+            if (status === 'clear') cardClass += ' status-clear';
+            if (status === 'accident') cardClass += ' status-accident';
+            
+            card.className = cardClass;
+            card.innerHTML = `
+                <h3>${escapeHtml(name)}</h3>
+                <p>${escapeHtml(detail)}</p>
+                <div class="meta">ผู้รายงาน: ${escapeHtml(username)} • เมื่อสักครู่</div>
+            `;
+            newsContainer.insertBefore(card, newsContainer.firstChild);
+
+            document.getElementById('locationName').value = '';
+            document.getElementById('detail').value = '';
+
+            alert("📢 บันทึกรายงานตรงพิกัดปัจจุบันเรียบร้อยครับ!");
         }
+
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        window.onload = checkAndInitMap;
     </script>
 </body>
 </html>
