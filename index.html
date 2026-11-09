@@ -190,7 +190,7 @@
             </div>
         </div>
 
-        <!-- Search Bar (Desktop & Mobile Responsive) -->
+        <!-- Search Bar -->
         <div class="flex-1 max-w-md mx-2 md:mx-6 relative">
             <div class="relative w-full">
                 <input type="text" id="searchInput" 
@@ -214,7 +214,7 @@
         <!-- Backdrop for Mobile Sidebar -->
         <div id="sidebarBackdrop" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-slate-950/60 z-20 md:hidden hidden backdrop-blur-xs"></div>
 
-        <!-- Left Sidebar Section (Responsive Drawer on Mobile, Fixed Sidebar on Desktop) -->
+        <!-- Left Sidebar Section -->
         <aside id="leftSidebar" class="absolute md:relative inset-y-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out w-80 md:w-96 lg:w-[420px] bg-[#53443a] border-r border-[#6e5849] flex flex-col h-full z-30 shadow-2xl flex-shrink-0">
             
             <div class="p-3 md:p-4 bg-[#4a3b2f] border-b border-[#6e5849] flex items-center justify-between gap-2">
@@ -248,7 +248,7 @@
                 </div>
             </div>
 
-            <!-- Recent User Reports Scrollable Feed -->
+            <!-- Recent User Reports Feed -->
             <div class="flex-1 flex flex-col min-h-0 p-3 md:p-4 overflow-hidden">
                 <div class="flex flex-col gap-2 mb-2.5">
                     <div class="flex items-center justify-between">
@@ -304,6 +304,21 @@
             </div>
         </section>
     </main>
+
+    <!-- Custom Modal for Location Permission Alert -->
+    <div id="locationPromptModal" class="z-50 fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-[#53443a] w-full max-w-sm rounded-3xl p-5 shadow-2xl border border-[#7a6452] text-center text-white">
+            <div class="w-12 h-12 bg-amber-950 text-amber-400 rounded-2xl flex items-center justify-center mx-auto mb-3 border border-amber-800/50">
+                <i class="fa-solid fa-location-dot text-xl animate-bounce"></i>
+            </div>
+            <h3 class="text-base font-bold text-white mb-1">ไม่สามารถเข้าถึงตำแหน่งของคุณได้</h3>
+            <p id="locationErrorDesc" class="text-xs text-amber-200/80 mb-5 leading-relaxed">กรุณาเปิดใช้งานบริการหาตำแหน่ง (Location Services / GPS) ในการตั้งค่าเบราว์เซอร์หรืออุปกรณ์ของคุณ เพื่อให้ระบบแสดงพิกัดปัจจุบันได้อย่างแม่นยำ</p>
+            <div class="flex gap-2">
+                <button onclick="closeLocationPromptModal()" class="flex-1 bg-[#4a3b2f] hover:bg-[#5c4a3c] text-amber-200 py-2.5 rounded-xl text-xs font-medium border border-[#7a6452]">ปิด</button>
+                <button onclick="retryGetLocation()" class="flex-1 bg-amber-600 hover:bg-amber-500 text-white py-2.5 rounded-xl text-xs font-semibold shadow-md">ลองใหม่อีกครั้ง</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal: Incident Reporting Form -->
     <div id="reportModal" class="z-50 fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-3 md:p-4 overflow-y-auto">
@@ -656,18 +671,27 @@
         }
 
         function setCoordinatesFromCurrentGPS() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    pos => {
-                        document.getElementById('reportCoords').value = `ตำแหน่งปัจจุบัน (${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)})`;
-                        document.getElementById('reportLatLonValue').value = `${pos.coords.latitude},${pos.coords.longitude}`;
-                        pinCurrentLocation(pos.coords.latitude, pos.coords.longitude);
-                        const suggestBox = document.getElementById('reportLocationSuggestions');
-                        if (suggestBox) suggestBox.classList.add('hidden');
-                    },
-                    () => alert("ไม่สามารถดึงพิกัด GPS ได้")
-                );
+            if (!navigator.geolocation) {
+                showLocationPrompt("เบราว์เซอร์ของคุณไม่รองรับการระบุตำแหน่ง GPS");
+                return;
             }
+            navigator.geolocation.getCurrentPosition(
+                pos => {
+                    document.getElementById('reportCoords').value = `ตำแหน่งปัจจุบัน (${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)})`;
+                    document.getElementById('reportLatLonValue').value = `${pos.coords.latitude},${pos.coords.longitude}`;
+                    pinCurrentLocation(pos.coords.latitude, pos.coords.longitude);
+                    const suggestBox = document.getElementById('reportLocationSuggestions');
+                    if (suggestBox) suggestBox.classList.add('hidden');
+                },
+                err => {
+                    let msg = "กรุณาอนุญาตหรือเปิดใช้งานบริการตำแหน่ง (Location Services) ในเบราว์เซอร์ของคุณเพื่อใช้งานฟังก์ชันนี้";
+                    if (err.code === err.PERMISSION_DENIED) {
+                        msg = "คุณปฏิเสธการเข้าถึงตำแหน่ง กรุณาเปิดการอนุญาตเข้าถึงตำแหน่งในตั้งค่าเบราว์เซอร์แล้วลองใหม่อีกครั้ง";
+                    }
+                    showLocationPrompt(msg);
+                },
+                { timeout: 10000, enableHighAccuracy: true }
+            );
         }
 
         function handleReportLocationInput(e) {
@@ -914,10 +938,47 @@
             if (window.updateUserReportsFeed) window.updateUserReportsFeed();
         }
 
-        function getCurrentLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(pos => pinCurrentLocation(pos.coords.latitude, pos.coords.longitude), () => alert("ไม่สามารถระบุตำแหน่งได้"));
+        function showLocationPrompt(message) {
+            const desc = document.getElementById('locationErrorDesc');
+            if (desc && message) desc.innerText = message;
+            const modal = document.getElementById('locationPromptModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
             }
+        }
+
+        function closeLocationPromptModal() {
+            const modal = document.getElementById('locationPromptModal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+        function retryGetLocation() {
+            closeLocationPromptModal();
+            getCurrentLocation();
+        }
+
+        function getCurrentLocation() {
+            if (!navigator.geolocation) {
+                showLocationPrompt("เบราว์เซอร์ของคุณไม่รองรับการระบุตำแหน่ง GPS");
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                pos => {
+                    pinCurrentLocation(pos.coords.latitude, pos.coords.longitude);
+                },
+                err => {
+                    let msg = "กรุณาเปิดใช้งานบริการตำแหน่ง (Location Services) ในเบราว์เซอร์หรืออุปกรณ์ของคุณ เพื่อให้ระบบแสดงพิกัดปัจจุบันได้";
+                    if (err.code === err.PERMISSION_DENIED) {
+                        msg = "เบราว์เซอร์ของคุณถูกปฏิเสธสิทธิ์การเข้าถึงตำแหน่ง กรุณากดปุ่มรูปแม่กุญแจหรือตั้งค่าเว็บไซต์ แล้วเปลี่ยนการอนุญาตตำแหน่งเป็น 'อนุญาต' (Allow)";
+                    }
+                    showLocationPrompt(msg);
+                },
+                { timeout: 10000, enableHighAccuracy: true }
+            );
         }
 
         function searchLocation() {
