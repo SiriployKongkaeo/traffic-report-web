@@ -91,14 +91,13 @@
                         .select('*')
                         .order('created_at', { ascending: false });
 
-                    if (!error && data) {
-                        window.userReports = data.map(item => {
-                            // ดึงค่าพิกัดให้ครอบคลุมทุกชื่อฟิลด์ที่เป็นไปได้ (lat, lon, lot)
+                    if (!error && data && data.length > 0) {
+                        const cloudReports = data.map(item => {
                             const latitude = parseFloat(item.lat);
                             const longitude = parseFloat(item.lon !== undefined && item.lon !== null ? item.lon : item.lot);
                             
                             return {
-                                id: item.id,
+                                id: String(item.id),
                                 userName: item.usename || item.name || 'ผู้ใช้งานทั่วไป',
                                 deviceUuid: item.device_uuid || '',
                                 category: item.status || 'traffic',
@@ -111,6 +110,16 @@
                                 timeStr: item.created_at ? new Date(item.created_at).toLocaleString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''
                             };
                         }).filter(item => !isNaN(item.lat) && !isNaN(item.lon));
+
+                        // ผสานข้อมูลจากคลาวด์เข้ากับข้อมูลในเครื่อง (รักษาโพสต์ท้องถิ่นที่เพิ่งส่งไม่ให้หาย)
+                        const existingIds = new Set(window.userReports.map(r => r.id));
+                        cloudReports.forEach(cloudItem => {
+                            if (!existingIds.has(cloudItem.id)) {
+                                window.userReports.push(cloudItem);
+                            }
+                        });
+
+                        window.userReports.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
                         
                         try { localStorage.setItem('local_traffic_reports', JSON.stringify(window.userReports)); } catch(e){}
                         if (window.updateUserReportsFeed) window.updateUserReportsFeed();
@@ -122,7 +131,7 @@
             }
 
             await fetchCloudData();
-            setInterval(() => { fetchCloudData(); }, 5000);
+            setInterval(() => { fetchCloudData(); }, 10000);
         };
 
         function getCategoryText(catKey) {
