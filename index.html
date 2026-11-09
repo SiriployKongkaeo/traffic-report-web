@@ -92,19 +92,25 @@
                         .order('created_at', { ascending: false });
 
                     if (!error && data) {
-                        window.userReports = data.map(item => ({
-                            id: item.id,
-                            userName: item.usename || item.name || 'ผู้ใช้งานทั่วไป',
-                            deviceUuid: item.device_uuid || '',
-                            category: item.status || 'traffic',
-                            categoryText: getCategoryText(item.status),
-                            detail: item.detail || '',
-                            imageUrl: item.name && item.name.startsWith('data:image') ? item.name : 'https://placehold.co/600x400/5c4a3c/fef3c7?text=Traffic+Report',
-                            lat: parseFloat(item.lat),
-                            lon: parseFloat(item.lon !== undefined ? item.lon : item.lot), // รองรับทั้ง lon และ lot จากฐานข้อมูล
-                            createdAt: item.created_at || new Date().toISOString(),
-                            timeStr: item.created_at ? new Date(item.created_at).toLocaleString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''
-                        })).filter(item => !isNaN(item.lat) && !isNaN(item.lon));
+                        window.userReports = data.map(item => {
+                            // ดึงค่าพิกัดให้ครอบคลุมทุกชื่อฟิลด์ที่เป็นไปได้ (lat, lon, lot)
+                            const latitude = parseFloat(item.lat);
+                            const longitude = parseFloat(item.lon !== undefined && item.lon !== null ? item.lon : item.lot);
+                            
+                            return {
+                                id: item.id,
+                                userName: item.usename || item.name || 'ผู้ใช้งานทั่วไป',
+                                deviceUuid: item.device_uuid || '',
+                                category: item.status || 'traffic',
+                                categoryText: getCategoryText(item.status),
+                                detail: item.detail || '',
+                                imageUrl: item.name && item.name.startsWith('data:image') ? item.name : 'https://placehold.co/600x400/5c4a3c/fef3c7?text=Traffic+Report',
+                                lat: latitude,
+                                lon: longitude,
+                                createdAt: item.created_at || new Date().toISOString(),
+                                timeStr: item.created_at ? new Date(item.created_at).toLocaleString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''
+                            };
+                        }).filter(item => !isNaN(item.lat) && !isNaN(item.lon));
                         
                         try { localStorage.setItem('local_traffic_reports', JSON.stringify(window.userReports)); } catch(e){}
                         if (window.updateUserReportsFeed) window.updateUserReportsFeed();
@@ -611,6 +617,7 @@
 
             try {
                 if (window.sbClient) {
+                    // ส่งข้อมูลบันทึกทั้ง lon และ lot เพื่อให้รองรับฐานข้อมูลทุกโครงสร้าง
                     await window.sbClient.from('traffic-report-web').insert([{
                         usename: reporterName,
                         device_uuid: deviceUuid,
