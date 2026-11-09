@@ -551,9 +551,14 @@
             document.getElementById('searchInput').value = name;
             const suggestBox = document.getElementById('searchSuggestions');
             if (suggestBox) suggestBox.classList.add('hidden');
-            flyToLocation(lat, lon, 15);
+            
+            const parsedLat = parseFloat(lat);
+            const parsedLon = parseFloat(lon);
+            if (isNaN(parsedLat) || isNaN(parsedLon)) return;
+
+            flyToLocation(parsedLat, parsedLon, 16);
             if (currentSearchMarker) map.Overlays.remove(currentSearchMarker);
-            currentSearchMarker = new longdo.Marker({ lon, lat }, { title: '', detail: `<div style="padding:6px; font-weight:bold; color:#1f2937; font-family: Kanit, sans-serif;">📍 ${name}</div>` });
+            currentSearchMarker = new longdo.Marker({ lon: parsedLon, lat: parsedLat }, { title: '', detail: `<div style="padding:6px; font-weight:bold; color:#1f2937; font-family: Kanit, sans-serif;">📍 ${name}</div>` });
             map.Overlays.add(currentSearchMarker);
         }
 
@@ -949,24 +954,29 @@
                 return;
             }
 
-            map.Search.search(query);
+            map.Search.search(query, { limit: 1 });
             map.Event.unbind('search');
             map.Event.bind('search', res => {
                 if (res && res.data && res.data.length > 0) {
                     const match = res.data[0];
-                    selectSearchResult(match.lat, match.lon, match.name || rawQuery);
-                } else {
-                    map.Search.search(rawQuery);
-                    map.Event.unbind('search');
-                    map.Event.bind('search', res2 => {
-                        if (res2 && res2.data && res2.data.length > 0) {
-                            const match = res2.data[0];
-                            selectSearchResult(match.lat, match.lon, match.name || rawQuery);
-                        } else {
-                            alert("ไม่พบสถานที่ที่ค้นหา");
-                        }
-                    });
+                    if (match.lat && match.lon) {
+                        selectSearchResult(match.lat, match.lon, match.name || match.address || rawQuery);
+                        return;
+                    }
                 }
+                
+                map.Search.search(rawQuery, { limit: 1 });
+                map.Event.unbind('search');
+                map.Event.bind('search', res2 => {
+                    if (res2 && res2.data && res2.data.length > 0) {
+                        const match = res2.data[0];
+                        if (match.lat && match.lon) {
+                            selectSearchResult(match.lat, match.lon, match.name || match.address || rawQuery);
+                            return;
+                        }
+                    }
+                    alert("ไม่พบสถานที่ที่ค้นหา กรุณาลระบุชื่อให้ชัดเจนยิ่งขึ้น");
+                });
             });
         }
 
