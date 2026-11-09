@@ -82,7 +82,7 @@
                             imageUrl: item.name && item.name.startsWith('data:image') ? item.name : 'https://placehold.co/600x400/5c4a3c/fef3c7?text=Traffic+Report',
                             lat: item.lat,
                             lon: item.lot,
-                            timeStr: item.created_at ? new Date(item.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' }) : ''
+                            timeStr: item.created_at ? new Date(item.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : ''
                         }));
                         
                         try { localStorage.setItem('local_traffic_reports', JSON.stringify(window.userReports)); } catch(e){}
@@ -781,7 +781,7 @@
             const categoryText = document.getElementById('reportCategory').options[document.getElementById('reportCategory').selectedIndex].text;
             const detail = document.getElementById('reportDetail').value.trim() || 'ไม่มีรายละเอียด';
             const [lat, lon] = coordsStr.split(',').map(n => parseFloat(n.trim()));
-            const timeStr = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
+            const timeStr = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
 
             const newReportItem = {
                 id: 'report-' + Date.now(),
