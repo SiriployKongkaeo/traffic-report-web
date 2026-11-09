@@ -41,7 +41,7 @@
         let supabaseClient = null;
         try {
             if (window.supabase) {
-                const activeUrl = window.SUPABASE_URL || "https://traffic-thailand-demo.supabase.co";
+                const activeUrl = window.SUPABASE_URL && window.SUPABASE_URL.startsWith('http') ? window.SUPABASE_URL : "https://traffic-thailand-demo.supabase.co";
                 supabaseClient = window.supabase.createClient(activeUrl, SUPABASE_ANON_KEY);
             }
         } catch (e) {
@@ -50,7 +50,15 @@
         window.sbClient = supabaseClient;
 
         window.subscribeIncidents = async function() {
+            // Load local backup first
+            let localData = [];
+            try {
+                const saved = localStorage.getItem('local_traffic_reports');
+                if (saved) localData = JSON.parse(saved);
+            } catch(e) {}
+
             if (!window.sbClient) {
+                window.userReports = localData;
                 if (window.updateUserReportsFeed) window.updateUserReportsFeed();
                 if (window.renderAllIncidentMarkers) window.renderAllIncidentMarkers();
                 return;
@@ -58,40 +66,43 @@
 
             try {
                 const { data, error } = await window.sbClient
-                    .from('incidents')
+                    .from('traffic-report-web')
                     .select('*')
                     .order('created_at', { ascending: false });
 
                 if (!error && data) {
                     window.userReports = data.map(item => ({
                         id: item.id,
-                        userName: item.user_name,
-                        category: item.category,
-                        categoryText: item.category_text,
-                        detail: item.detail,
-                        imageUrl: item.image_url,
+                        userName: item.usename || item.name || 'ผู้ใช้งานทั่วไป',
+                        category: item.status || 'traffic',
+                        categoryText: getCategoryText(item.status),
+                        detail: item.detail || '',
+                        imageUrl: item.name && item.name.startsWith('data:image') ? item.name : 'https://placehold.co/600x400/5c4a3c/fef3c7?text=Traffic+Report',
                         lat: item.lat,
-                        lon: item.lon,
-                        timeStr: item.time_str || new Date(item.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+                        lon: item.lot,
+                        timeStr: new Date(item.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
                     }));
-                    if (window.updateUserReportsFeed) window.updateUserReportsFeed();
-                    if (window.renderAllIncidentMarkers) window.renderAllIncidentMarkers();
+                } else {
+                    window.userReports = localData;
                 }
 
+                if (window.updateUserReportsFeed) window.updateUserReportsFeed();
+                if (window.renderAllIncidentMarkers) window.renderAllIncidentMarkers();
+
                 window.sbClient
-                    .channel('public:incidents')
-                    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'incidents' }, payload => {
+                    .channel('public:traffic-report-web')
+                    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'traffic-report-web' }, payload => {
                         const newItem = payload.new;
                         const formattedItem = {
                             id: newItem.id,
-                            userName: newItem.user_name,
-                            category: newItem.category,
-                            categoryText: newItem.category_text,
-                            detail: newItem.detail,
-                            imageUrl: newItem.image_url,
+                            userName: newItem.usename || newItem.name || 'ผู้ใช้งานทั่วไป',
+                            category: newItem.status || 'traffic',
+                            categoryText: getCategoryText(newItem.status),
+                            detail: newItem.detail || '',
+                            imageUrl: newItem.name && newItem.name.startsWith('data:image') ? newItem.name : 'https://placehold.co/600x400/5c4a3c/fef3c7?text=Traffic+Report',
                             lat: newItem.lat,
-                            lon: newItem.lon,
-                            timeStr: newItem.time_str || new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+                            lon: newItem.lot,
+                            timeStr: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
                         };
                         
                         if (!window.userReports) window.userReports = [];
@@ -104,12 +115,23 @@
                     .subscribe();
 
             } catch (err) {
-                console.warn("Supabase subscription notice:", err);
-                if (!window.userReports) window.userReports = [];
+                console.warn("Supabase connection notice, using local cache:", err);
+                window.userReports = localData;
                 if (window.updateUserReportsFeed) window.updateUserReportsFeed();
                 if (window.renderAllIncidentMarkers) window.renderAllIncidentMarkers();
             }
         };
+
+        function getCategoryText(catKey) {
+            switch(catKey) {
+                case 'traffic': return '🚦 การจราจรติดขัดหนาแน่น';
+                case 'accident': return '💥 เกิดอุบัติเหตุ / ชนกัน';
+                case 'road': return '🚧 ถนนชำรุด / เป็นหลุมเป็นบ่อ';
+                case 'flood': return '🌊 น้ำท่วมขังรอการระบาย';
+                case 'construction': return '🏗️ มีการซ่อมแซมทาง / ก่อสร้าง';
+                default: return '🚦 ' + (catKey || 'เหตุการณ์บนถนน');
+            }
+        }
     </script>
 
     <style>
@@ -770,40 +792,52 @@
             const [lat, lon] = coordsStr.split(',').map(n => parseFloat(n.trim()));
             const timeStr = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
 
+            const newReportItem = {
+                id: 'report-' + Date.now(),
+                userName: reporterName,
+                category, categoryText, detail,
+                imageUrl: selectedImageBase64, lat, lon: lon, timeStr
+            };
+
             try {
+                let savedToCloud = false;
                 if (window.sbClient) {
                     const { error } = await window.sbClient
-                        .from('incidents')
+                        .from('traffic-report-web')
                         .insert([
                             {
-                                user_name: reporterName,
-                                category: category,
-                                category_text: categoryText,
+                                usename: reporterName,
+                                status: category,
                                 detail: detail,
-                                image_url: selectedImageBase64,
+                                name: selectedImageBase64, // เก็บรูปภาพ Base64 ไว้ในคอลัมน์ name ตามโครงสร้างตาราง
                                 lat: lat,
-                                lon: lon,
-                                time_str: timeStr
+                                lot: lon
                             }
                         ]);
-                    if (error) throw error;
-                } else {
-                    if (!window.userReports) window.userReports = [];
-                    window.userReports.unshift({
-                        id: 'local-' + Date.now(),
-                        userName: reporterName,
-                        category, categoryText, detail,
-                        imageUrl: selectedImageBase64, lat, lon, timeStr
-                    });
-                    if (window.updateUserReportsFeed) window.updateUserReportsFeed();
-                    if (window.renderAllIncidentMarkers) window.renderAllIncidentMarkers();
+                    if (!error) savedToCloud = true;
+                    else console.warn("Supabase insert warning:", error);
                 }
+
+                // Fallback / Local backup
+                if (!window.userReports) window.userReports = [];
+                window.userReports.unshift(newReportItem);
+                try {
+                    localStorage.setItem('local_traffic_reports', JSON.stringify(window.userReports));
+                } catch(e){}
+
+                if (window.updateUserReportsFeed) window.updateUserReportsFeed();
+                if (window.renderAllIncidentMarkers) window.renderAllIncidentMarkers();
 
                 closeReportModal();
                 flyToLocation(lat, lon, 14);
             } catch (err) {
-                console.error("Supabase insert error:", err);
-                alert("เกิดข้อผิดพลาดในการบันทึกข้อมูลผ่าน Supabase กรุณาตรวจสอบตาราง incidents");
+                console.error("Report submit error:", err);
+                if (!window.userReports) window.userReports = [];
+                window.userReports.unshift(newReportItem);
+                if (window.updateUserReportsFeed) window.updateUserReportsFeed();
+                if (window.renderAllIncidentMarkers) window.renderAllIncidentMarkers();
+                closeReportModal();
+                flyToLocation(lat, lon, 14);
             }
         }
 
@@ -812,6 +846,7 @@
             activeMarkers.forEach(m => map.Overlays.remove(m));
             activeMarkers = [];
 
+            if (!window.userReports) return;
             window.userReports.forEach(report => {
                 const style = getCategoryStyle(report.category);
                 const pinElement = document.createElement('div');
