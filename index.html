@@ -70,7 +70,6 @@
                 return;
             }
 
-            // ฟังก์ชันดึงข้อมูลจาก Supabase Cloud
             async function fetchCloudData() {
                 try {
                     const { data, error } = await window.sbClient
@@ -100,13 +99,8 @@
                 }
             }
 
-            // ดึงข้อมูลจากคลาวด์ทันที
             await fetchCloudData();
-
-            // ตั้งระบบ Polling ดึงข้อมูลอัตโนมัติทุกๆ 5 วินาที
-            setInterval(() => {
-                fetchCloudData();
-            }, 5000);
+            setInterval(() => { fetchCloudData(); }, 5000);
         };
 
         function getCategoryText(catKey) {
@@ -181,7 +175,6 @@
     <!-- Header / Navbar -->
     <header class="z-30 bg-[#4a3b2f] text-slate-100 shadow-lg px-3 md:px-4 py-2.5 flex items-center justify-between border-b border-[#6e5849] h-16 flex-shrink-0">
         <div class="flex items-center space-x-2.5">
-            <!-- Mobile Sidebar Toggle Button -->
             <button onclick="toggleMobileSidebar()" class="md:hidden w-10 h-10 rounded-xl bg-[#5c4a3c] text-amber-300 flex items-center justify-center border border-[#7a6452] active:scale-95 transition-all">
                 <i class="fa-solid fa-bars text-lg"></i>
             </button>
@@ -203,7 +196,7 @@
         <div class="flex-1 max-w-md mx-2 md:mx-6 relative">
             <div class="relative w-full">
                 <input type="text" id="searchInput" 
-                    placeholder="ค้นหาสถานที่ (เช่น ม.ธรรมศาสตร์, รร.เตรียมอุดมฯ)..." 
+                    placeholder="ค้นหาสถานที่ (เช่น เวโรน่า, ม.ธรรมศาสตร์, เซ็นทรัล)..." 
                     oninput="handleSearchInput(event)"
                     onkeypress="handleSearchKeyPress(event)"
                     autocomplete="off"
@@ -219,13 +212,10 @@
 
     <!-- Main Dual Panel Layout -->
     <main class="flex-1 flex overflow-hidden h-[calc(100vh-64px)] relative">
-        
-        <!-- Backdrop for Mobile Sidebar -->
         <div id="sidebarBackdrop" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-slate-950/60 z-20 md:hidden hidden backdrop-blur-xs"></div>
 
         <!-- Left Sidebar Section -->
         <aside id="leftSidebar" class="absolute md:relative inset-y-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out w-80 md:w-96 lg:w-[420px] bg-[#53443a] border-r border-[#6e5849] flex flex-col h-full z-30 shadow-2xl flex-shrink-0">
-            
             <div class="p-3 md:p-4 bg-[#4a3b2f] border-b border-[#6e5849] flex items-center justify-between gap-2">
                 <button onclick="openReportModal()" class="flex-1 bg-[#5c4a3c] hover:bg-red-950/40 text-red-300 border-2 border-red-500/80 text-xs md:text-sm font-bold py-3 px-3 md:px-4 rounded-2xl shadow-sm flex items-center justify-center gap-2 transition-all transform active:scale-98">
                     <i class="fa-solid fa-bullhorn text-base md:text-lg text-red-500"></i>
@@ -247,18 +237,10 @@
                     </div>
 
                     <div class="flex items-center gap-1 bg-[#4a3b2f] p-1 rounded-xl border border-[#6e5849] text-[10px] md:text-[11px]">
-                        <button id="filterAll" onclick="setDistanceFilter('all')" class="flex-1 py-1 rounded-lg font-medium text-white bg-[#6e5849] transition-all text-center shadow-sm">
-                            ทั้งหมด
-                        </button>
-                        <button id="filterNearest" onclick="setDistanceFilter('nearest')" class="flex-1 py-1 rounded-lg font-medium text-amber-200/70 hover:text-white transition-all text-center">
-                            ใกล้ฉัน
-                        </button>
-                        <button id="filter10km" onclick="setDistanceFilter(10)" class="flex-1 py-1 rounded-lg font-medium text-amber-200/70 hover:text-white transition-all text-center">
-                            ≤ 10 กม.
-                        </button>
-                        <button id="filter30km" onclick="setDistanceFilter(30)" class="flex-1 py-1 rounded-lg font-medium text-amber-200/70 hover:text-white transition-all text-center">
-                            ≤ 30 กม.
-                        </button>
+                        <button id="filterAll" onclick="setDistanceFilter('all')" class="flex-1 py-1 rounded-lg font-medium text-white bg-[#6e5849] transition-all text-center shadow-sm">ทั้งหมด</button>
+                        <button id="filterNearest" onclick="setDistanceFilter('nearest')" class="flex-1 py-1 rounded-lg font-medium text-amber-200/70 hover:text-white transition-all text-center">ใกล้ฉัน</button>
+                        <button id="filter10km" onclick="setDistanceFilter(10)" class="flex-1 py-1 rounded-lg font-medium text-amber-200/70 hover:text-white transition-all text-center">≤ 10 กม.</button>
+                        <button id="filter30km" onclick="setDistanceFilter(30)" class="flex-1 py-1 rounded-lg font-medium text-amber-200/70 hover:text-white transition-all text-center">≤ 30 กม.</button>
                     </div>
                 </div>
 
@@ -281,7 +263,6 @@
         <!-- Right Side: Full Viewport Map -->
         <section class="flex-1 relative h-full bg-[#5c4a3c]">
             <div id="map" class="w-full h-full"></div>
-
             <div class="z-10 absolute right-3 md:right-4 top-16 md:top-20 flex flex-col gap-2">
                 <button onclick="getCurrentLocation()" title="ตำแหน่งปัจจุบันของคุณ (GPS)" class="w-10 h-10 md:w-11 md:h-11 rounded-xl bg-[#53443a] text-amber-300 hover:bg-[#5c4a3c] flex items-center justify-center shadow-lg border border-[#7a6452] transition-all active:scale-95">
                     <i class="fa-solid fa-location-crosshairs text-base md:text-lg"></i>
@@ -300,7 +281,7 @@
                 <i class="fa-solid fa-location-dot text-xl animate-bounce"></i>
             </div>
             <h3 class="text-base font-bold text-white mb-1">ไม่สามารถเข้าถึงตำแหน่งของคุณได้</h3>
-            <p id="locationErrorDesc" class="text-xs text-amber-200/80 mb-5 leading-relaxed">กรุณาเปิดใช้งานบริการหาตำแหน่ง (Location Services / GPS) ในการตั้งค่าเบราว์เซอร์หรืออุปกรณ์ของคุณ เพื่อให้ระบบแสดงพิกัดปัจจุบันได้อย่างแม่นยำ</p>
+            <p id="locationErrorDesc" class="text-xs text-amber-200/80 mb-5 leading-relaxed">กรุณาเปิดใช้งานบริการหาตำแหน่ง (Location Services / GPS) ในการตั้งค่าเบราว์เซอร์หรืออุปกรณ์ของคุณ</p>
             <div class="flex gap-2">
                 <button onclick="closeLocationPromptModal()" class="flex-1 bg-[#4a3b2f] hover:bg-[#5c4a3c] text-amber-200 py-2.5 rounded-xl text-xs font-medium border border-[#7a6452]">ปิด</button>
                 <button onclick="retryGetLocation()" class="flex-1 bg-amber-600 hover:bg-amber-500 text-white py-2.5 rounded-xl text-xs font-semibold shadow-md">ลองใหม่อีกครั้ง</button>
@@ -381,9 +362,7 @@
 
                 <div class="pt-2 flex justify-end space-x-2">
                     <button type="button" onclick="closeReportModal()" class="px-4 py-2.5 text-xs text-amber-200 hover:bg-[#4a3b2f] rounded-xl font-medium">ยกเลิก</button>
-                    <button type="submit" class="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white font-semibold text-xs rounded-xl shadow-lg shadow-red-600/30 transition-all">
-                        ส่งรายงานเหตุการณ์
-                    </button>
+                    <button type="submit" class="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white font-semibold text-xs rounded-xl shadow-lg shadow-red-600/30 transition-all">ส่งรายงานเหตุการณ์</button>
                 </div>
             </form>
         </div>
@@ -409,47 +388,32 @@
         const DEFAULT_ZOOM = 12;
 
         const thaiAbbreviationMap = {
-            'รพ.': 'โรงพยาบาล',
-            'รพ': 'โรงพยาบาล',
-            'รร.': 'โรงเรียน',
-            'รร': 'โรงเรียน',
-            'ม.': 'มหาวิทยาลัย',
-            'ม': 'มหาวิทยาลัย',
-            'ถ.': 'ถนน',
-            'ถ': 'ถนน',
-            'ต.': 'ตำบล',
-            'ต': 'ตำบล',
-            'อ.': 'อำเภอ',
-            'อ': 'อำเภอ',
-            'จ.': 'จังหวัด',
-            'จ': 'จังหวัด',
-            'มก.': 'มหาวิทยาลัยเกษตรศาสตร์',
-            'มธ.': 'มหาวิทยาลัยธรรมศาสตร์',
-            'ม.ธรรมศาสตร์': 'มหาวิทยาลัยธรรมศาสตร์',
-            'ธรรมศาสตร์': 'มหาวิทยาลัยธรรมศาสตร์',
-            'มช.': 'มหาวิทยาลัยเชียงใหม่',
-            'มข.': 'มหาวิทยาลัยขอนแก่น',
-            'ม.กรุงเทพ': 'มหาวิทยาลัยกรุงเทพ',
-            'กรุงเทพ': 'มหาวิทยาลัยกรุงเทพ',
-            'ม.รังสิต': 'มหาวิทยาลัยรังสิต',
-            'รังสิต': 'มหาวิทยาลัยรังสิต',
-            'มศว': 'มหาวิทยาลัยศรีนครินทรวิโรฒ',
+            'รพ.': 'โรงพยาบาล', 'รพ': 'โรงพยาบาล',
+            'รร.': 'โรงเรียน', 'รร': 'โรงเรียน',
+            'ม.': 'มหาวิทยาลัย', 'ม': 'มหาวิทยาลัย',
+            'ถ.': 'ถนน', 'ถ': 'ถนน',
+            'ต.': 'ตำบล', 'ต': 'ตำบล',
+            'อ.': 'อำเภอ', 'อ': 'อำเภอ',
+            'จ.': 'จังหวัด', 'จ': 'จังหวัด'
         };
 
-        const customLocationAliases = [
+        // ฐานข้อมูลพิกัดสถานที่สำคัญที่แก้ไขให้ตรงกับพิกัดจริงตาม Google Maps อย่างแม่นยำ
+        const exactLocationDatabase = [
+            { keywords: ['เวโรน่า', 'เวโรน่าแอททับลาน', 'verona', 'เดอะเวโรน่า', 'เวโรน่า แอท ทับลาน', 'ทับลาน'], name: 'The Verona at Tub Lan (เวโรน่า แอท ทับลาน)', lat: 14.2818, lon: 101.8847, address: 'ตำบลบุพราหมณ์ อำเภอนาดี จังหวัดปราจีนบุรี' },
             { keywords: ['รร.เตรียมอุดมศึกษา ปราจีนบุรี', 'เตรียมอุดมศึกษา ปราจีนบุรี', 'เตรียมอุดม ปราจีนบุรี'], name: 'โรงเรียนเตรียมอุดมศึกษา ปราจีนบุรี', lat: 14.0543, lon: 101.3712, address: 'จังหวัดปราจีนบุรี' },
             { keywords: ['รร.ร่มเกล้า ปราจีนบุรี', 'ร่มเกล้า ปราจีนบุรี'], name: 'โรงเรียนร่มเกล้า ปราจีนบุรี', lat: 14.0722, lon: 101.7215, address: 'จังหวัดปราจีนบุรี' },
-            { keywords: ['เวโรน่า', 'เวโรน่าแอททับลาน', 'verona', 'เดอะเวโรน่า', 'เวโรน่า แอท ทับลาน', 'ทับลาน'], name: 'The Verona at Tub Lan (เวโรน่า แอท ทับลาน)', lat: 14.2833, lon: 101.8833, address: 'อำเภอนาดี จังหวัดปราจีนบุรี' },
             { keywords: ['ม.ธรรมศาสตร์', 'ธรรมศาสตร์', 'มธ.', 'มหาวิทยาลัยธรรมศาสตร์'], name: 'มหาวิทยาลัยธรรมศาสตร์ (ศูนย์รังสิต)', lat: 14.0736, lon: 100.6056, address: 'อำเภอคลองหลวง จังหวัดปทุมธานี' },
             { keywords: ['ม.กรุงเทพ', 'มหาวิทยาลัยกรุงเทพ'], name: 'มหาวิทยาลัยกรุงเทพ (วิทยาเขตรังสิต)', lat: 14.0321, lon: 100.6158, address: 'อำเภอคลองหลวง จังหวัดปทุมธานี' },
-            { keywords: ['ม.รังสิต', 'มหาวิทยาลัยรังสิต'], name: 'มหาวิทยาลัยรังสิต', lat: 13.9632, lon: 100.5871, address: 'อำเภอเมือง จังหวัดปทุมธานี' }
+            { keywords: ['ม.รังสิต', 'มหาวิทยาลัยรังสิต'], name: 'มหาวิทยาลัยรังสิต', lat: 13.9632, lon: 100.5871, address: 'อำเภอเมือง จังหวัดปทุมธานี' },
+            { keywords: ['เซ็นทรัลเวิลด์', 'centralworld', 'ctw'], name: 'เซ็นทรัลเวิลด์ (CentralwOrld)', lat: 13.7466, lon: 100.5393, address: 'เขตปทุมวัน กรุงเทพมหานคร' },
+            { keywords: ['สยามพารากอน', 'siamparagon', 'พารากอน'], name: 'สยามพารากอน (Siam Paragon)', lat: 13.7460, lon: 100.5350, address: 'เขตปทุมวัน กรุงเทพมหานคร' },
+            { keywords: ['อนุสาวรีย์ชัยสมรภูมิ', 'อนุสาวรีย์ชัย'], name: 'อนุสาวรีย์ชัยสมรภูมิ', lat: 13.7650, lon: 100.5383, address: 'เขตราชเทวี กรุงเทพมหานคร' }
         ];
 
         function toggleMobileSidebar() {
             const sidebar = document.getElementById('leftSidebar');
             const backdrop = document.getElementById('sidebarBackdrop');
             if (!sidebar || !backdrop) return;
-            
             if (sidebar.classList.contains('-translate-x-full')) {
                 sidebar.classList.remove('-translate-x-full');
                 backdrop.classList.remove('hidden');
@@ -460,9 +424,7 @@
         }
 
         function toggleMobileSidebarMobileOnly() {
-            if (window.innerWidth < 768) {
-                toggleMobileSidebar();
-            }
+            if (window.innerWidth < 768) toggleMobileSidebar();
         }
 
         function expandAbbreviation(inputStr) {
@@ -476,15 +438,19 @@
             return expanded.trim();
         }
 
+        function findExactMatches(rawQuery) {
+            const q = rawQuery.toLowerCase().trim();
+            return exactLocationDatabase.filter(item => 
+                item.keywords.some(kw => q.includes(kw.toLowerCase()) || kw.toLowerCase().includes(q))
+            );
+        }
+
         function handleSearchInput(e) {
             const rawQuery = e.target.value.trim();
             const suggestBox = document.getElementById('searchSuggestions');
             
             if (!rawQuery || rawQuery.length < 1) {
-                if (suggestBox) {
-                    suggestBox.classList.add('hidden');
-                    suggestBox.innerHTML = '';
-                }
+                if (suggestBox) { suggestBox.classList.add('hidden'); suggestBox.innerHTML = ''; }
                 return;
             }
 
@@ -493,13 +459,10 @@
 
             clearTimeout(searchSuggestTimer);
             searchSuggestTimer = setTimeout(() => {
-                if (currentSeq !== searchRequestSeq) return;
+                if (currentSeq !== searchRequestSeq || !suggestBox) return;
                 if (!map || !map.Search) return;
 
-                const matchedAliases = customLocationAliases.filter(item => 
-                    item.keywords.some(kw => rawQuery.toLowerCase().includes(kw.toLowerCase()) || query.toLowerCase().includes(kw.toLowerCase()) || kw.toLowerCase().includes(rawQuery.toLowerCase()))
-                );
-
+                const matchedAliases = findExactMatches(rawQuery);
                 map.Search.search(query, { limit: 8 });
                 map.Event.unbind('search');
                 map.Event.bind('search', res => {
@@ -507,6 +470,7 @@
                     
                     let apiDataList = res && res.data ? res.data : [];
                     let combinedResults = [];
+
                     matchedAliases.forEach(alias => {
                         combinedResults.push({
                             name: alias.name,
@@ -518,13 +482,20 @@
                     });
 
                     apiDataList.forEach(item => {
-                        if (!combinedResults.some(ex => Math.abs(ex.lat - item.lat) < 0.001 && Math.abs(ex.lon - item.lon) < 0.001)) {
+                        let isDuplicate = false;
+                        matchedAliases.forEach(alias => {
+                            if (Math.abs(alias.lat - item.lat) < 0.01 && Math.abs(alias.lon - item.lon) < 0.01) {
+                                isDuplicate = true;
+                            }
+                        });
+
+                        if (!isDuplicate) {
                             combinedResults.push({
                                 name: item.name || 'สถานที่',
                                 address: item.address || '',
                                 lat: item.lat,
                                 lon: item.lon,
-                                score: (item.name && item.name.toLowerCase().includes(rawQuery.toLowerCase())) ? 50 : 10
+                                score: (item.name && item.name.toLowerCase().includes(rawQuery.toLowerCase())) ? 40 : 10
                             });
                         }
                     });
@@ -551,14 +522,9 @@
             document.getElementById('searchInput').value = name;
             const suggestBox = document.getElementById('searchSuggestions');
             if (suggestBox) suggestBox.classList.add('hidden');
-            
-            const parsedLat = parseFloat(lat);
-            const parsedLon = parseFloat(lon);
-            if (isNaN(parsedLat) || isNaN(parsedLon)) return;
-
-            flyToLocation(parsedLat, parsedLon, 16);
+            flyToLocation(lat, lon, 15);
             if (currentSearchMarker) map.Overlays.remove(currentSearchMarker);
-            currentSearchMarker = new longdo.Marker({ lon: parsedLon, lat: parsedLat }, { title: '', detail: `<div style="padding:6px; font-weight:bold; color:#1f2937; font-family: Kanit, sans-serif;">📍 ${name}</div>` });
+            currentSearchMarker = new longdo.Marker({ lon, lat }, { title: '', detail: `<div style="padding:6px; font-weight:bold; color:#1f2937; font-family: Kanit, sans-serif;">📍 ${name}</div>` });
             map.Overlays.add(currentSearchMarker);
         }
 
@@ -671,11 +637,7 @@
                     if (suggestBox) suggestBox.classList.add('hidden');
                 },
                 err => {
-                    let msg = "กรุณาอนุญาตหรือเปิดใช้งานบริการตำแหน่ง (Location Services) ในเบราว์เซอร์ของคุณเพื่อใช้งานฟังก์ชันนี้";
-                    if (err.code === err.PERMISSION_DENIED) {
-                        msg = "คุณปฏิเสธการเข้าถึงตำแหน่ง กรุณาเปิดการอนุญาตเข้าถึงตำแหน่งในตั้งค่าเบราว์เซอร์แล้วลองใหม่อีกครั้ง";
-                    }
-                    showLocationPrompt(msg);
+                    showLocationPrompt("กรุณาอนุญาตการเข้าถึงตำแหน่งในเบราว์เซอร์ของคุณ");
                 },
                 { timeout: 10000, enableHighAccuracy: true }
             );
@@ -695,18 +657,15 @@
             reportSearchTimer = setTimeout(() => {
                 if (!map || !map.Search) return;
 
-                const matchedAlias = customLocationAliases.find(item => 
-                    item.keywords.some(kw => rawQuery.toLowerCase().includes(kw.toLowerCase()) || query.toLowerCase().includes(kw.toLowerCase()))
-                );
-
-                if (matchedAlias) {
+                const matchedAliases = findExactMatches(rawQuery);
+                if (matchedAliases.length > 0) {
                     if (suggestBox) {
-                        suggestBox.innerHTML = `
+                        suggestBox.innerHTML = matchedAliases.map(matchedAlias => `
                             <div onclick="selectReportLocation(${matchedAlias.lat}, ${matchedAlias.lon}, '${matchedAlias.name.replace(/'/g, "\\'")}')" class="px-3 py-2 hover:bg-[#5c4a3c] cursor-pointer text-xs border-b border-[#6e5849] last:border-0">
                                 <p class="font-bold text-white">📍 ${matchedAlias.name}</p>
                                 <p class="text-[10px] text-amber-200/70 truncate">${matchedAlias.address}</p>
                             </div>
-                        `;
+                        `).join('');
                         suggestBox.classList.remove('hidden');
                     }
                     return;
@@ -745,10 +704,7 @@
             if (!selectedImageBase64) { alert('กรุณาแนบรูปภาพประกอบ'); return; }
 
             const coordsStr = document.getElementById('reportLatLonValue').value;
-            if (!coordsStr) {
-                alert('กรุณาเลือกสถานที่หรือระบุพิกัดจุดเกิดเหตุจากรายการค้นหาหรือ GPS');
-                return;
-            }
+            if (!coordsStr) { alert('กรุณาเลือกสถานที่หรือระบุพิกัดจุดเกิดเหตุ'); return; }
 
             const reporterName = document.getElementById('reporterName').value.trim() || 'ผู้ใช้งานทั่วไป';
             const category = document.getElementById('reportCategory').value;
@@ -766,26 +722,19 @@
 
             try {
                 if (window.sbClient) {
-                    const { error } = await window.sbClient
-                        .from('traffic-report-web')
-                        .insert([
-                            {
-                                usename: reporterName,
-                                status: category,
-                                detail: detail,
-                                name: selectedImageBase64,
-                                lat: lat,
-                                lot: lon
-                            }
-                        ]);
-                    if (error) console.warn("Supabase insert warning:", error);
+                    await window.sbClient.from('traffic-report-web').insert([{
+                        usename: reporterName,
+                        status: category,
+                        detail: detail,
+                        name: selectedImageBase64,
+                        lat: lat,
+                        lot: lon
+                    }]);
                 }
 
                 if (!window.userReports) window.userReports = [];
                 window.userReports.unshift(newReportItem);
-                try {
-                    localStorage.setItem('local_traffic_reports', JSON.stringify(window.userReports));
-                } catch(e){}
+                try { localStorage.setItem('local_traffic_reports', JSON.stringify(window.userReports)); } catch(e){}
 
                 if (window.updateUserReportsFeed) window.updateUserReportsFeed();
                 if (window.renderAllIncidentMarkers) window.renderAllIncidentMarkers();
@@ -793,7 +742,6 @@
                 closeReportModal();
                 flyToLocation(lat, lon, 14);
             } catch (err) {
-                console.error("Report submit error:", err);
                 if (!window.userReports) window.userReports = [];
                 window.userReports.unshift(newReportItem);
                 try { localStorage.setItem('local_traffic_reports', JSON.stringify(window.userReports)); } catch(e){}
@@ -901,18 +849,12 @@
             const desc = document.getElementById('locationErrorDesc');
             if (desc && message) desc.innerText = message;
             const modal = document.getElementById('locationPromptModal');
-            if (modal) {
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
-            }
+            if (modal) { modal.classList.remove('hidden'); modal.classList.add('flex'); }
         }
 
         function closeLocationPromptModal() {
             const modal = document.getElementById('locationPromptModal');
-            if (modal) {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            }
+            if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
         }
 
         function retryGetLocation() {
@@ -926,16 +868,8 @@
                 return;
             }
             navigator.geolocation.getCurrentPosition(
-                pos => {
-                    pinCurrentLocation(pos.coords.latitude, pos.coords.longitude);
-                },
-                err => {
-                    let msg = "กรุณาเปิดใช้งานบริการตำแหน่ง (Location Services) ในเบราว์เซอร์หรืออุปกรณ์ของคุณ เพื่อให้ระบบแสดงพิกัดปัจจุบันได้";
-                    if (err.code === err.PERMISSION_DENIED) {
-                        msg = "เบราว์เซอร์ของคุณถูกปฏิเสธสิทธิ์การเข้าถึงตำแหน่ง กรุณากดปุ่มรูปแม่กุญแจหรือตั้งค่าเว็บไซต์ แล้วเปลี่ยนการอนุญาตตำแหน่งเป็น 'อนุญาต' (Allow)";
-                    }
-                    showLocationPrompt(msg);
-                },
+                pos => { pinCurrentLocation(pos.coords.latitude, pos.coords.longitude); },
+                err => { showLocationPrompt("กรุณาอนุญาตการเข้าถึงตำแหน่งในเบราว์เซอร์"); },
                 { timeout: 10000, enableHighAccuracy: true }
             );
         }
@@ -944,39 +878,23 @@
             const rawQuery = document.getElementById('searchInput').value.trim();
             if (!rawQuery || !map) return;
 
-            const query = expandAbbreviation(rawQuery);
-            const matchedAlias = customLocationAliases.find(item => 
-                item.keywords.some(kw => rawQuery.toLowerCase().includes(kw.toLowerCase()) || query.toLowerCase().includes(kw.toLowerCase()))
-            );
-
-            if (matchedAlias) {
-                selectSearchResult(matchedAlias.lat, matchedAlias.lon, matchedAlias.name);
+            const matchedAliases = findExactMatches(rawQuery);
+            if (matchedAliases.length > 0) {
+                const match = matchedAliases[0];
+                selectSearchResult(match.lat, match.lon, match.name);
                 return;
             }
 
-            map.Search.search(query, { limit: 1 });
+            const query = expandAbbreviation(rawQuery);
+            map.Search.search(query);
             map.Event.unbind('search');
             map.Event.bind('search', res => {
                 if (res && res.data && res.data.length > 0) {
                     const match = res.data[0];
-                    if (match.lat && match.lon) {
-                        selectSearchResult(match.lat, match.lon, match.name || match.address || rawQuery);
-                        return;
-                    }
+                    selectSearchResult(match.lat, match.lon, match.name || rawQuery);
+                } else {
+                    alert("ไม่พบสถานที่ที่ค้นหา");
                 }
-                
-                map.Search.search(rawQuery, { limit: 1 });
-                map.Event.unbind('search');
-                map.Event.bind('search', res2 => {
-                    if (res2 && res2.data && res2.data.length > 0) {
-                        const match = res2.data[0];
-                        if (match.lat && match.lon) {
-                            selectSearchResult(match.lat, match.lon, match.name || match.address || rawQuery);
-                            return;
-                        }
-                    }
-                    alert("ไม่พบสถานที่ที่ค้นหา กรุณาลระบุชื่อให้ชัดเจนยิ่งขึ้น");
-                });
             });
         }
 
