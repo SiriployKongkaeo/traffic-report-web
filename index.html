@@ -48,6 +48,16 @@
         }
         window.sbClient = supabaseClient;
 
+        // จัดการ Device ID ประจำเครื่องเพื่อความปลอดภัยในการลบข้อมูล
+        function getDeviceUUID() {
+            let uuid = localStorage.getItem('traffic_device_uuid');
+            if (!uuid) {
+                uuid = 'device_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
+                localStorage.setItem('traffic_device_uuid', uuid);
+            }
+            return uuid;
+        }
+
         // จัดการชื่อผู้ใช้งาน (ห้ามซ้ำ / จำชื่อไว้ใน LocalStorage)
         function getStoredUsername() {
             let name = localStorage.getItem('traffic_reporter_name');
@@ -85,6 +95,7 @@
                         window.userReports = data.map(item => ({
                             id: item.id,
                             userName: item.usename || item.name || 'ผู้ใช้งานทั่วไป',
+                            deviceUuid: item.device_uuid || '', // ตรวจสอบรหัสเครื่องจากฐานข้อมูล
                             category: item.status || 'traffic',
                             categoryText: getCategoryText(item.status),
                             detail: item.detail || '',
@@ -358,10 +369,10 @@
             if (!newName || !newName.trim()) return;
             const trimmed = newName.trim();
             
-            // เช็คว่าชื่อซ้ำกับรายการคนอื่นในระบบหรือไม่
+            // ตรวจสอบกับข้อมูลในเครื่องและคลาวด์ว่ามีชื่อนี้แล้วหรือยัง
             const isDuplicate = window.userReports.some(r => r.userName.toLowerCase() === trimmed.toLowerCase() && r.userName !== current);
             if (isDuplicate) {
-                alert("ชื่อผู้รายงานนี้มีผู้ใช้งานแล้วในระบบ กรุณาใช้ชื่ออื่น");
+                alert("ชื่อผู้รายงานนี้มีผู้ใช้งานแล้วในระบบ กรุณาใช้ชื่ออื่นที่ไม่ซ้ำกัน");
                 return;
             }
 
@@ -582,6 +593,7 @@
             const lat = parseFloat(document.getElementById('reportCoords').dataset.lat || DEFAULT_LAT);
             const lon = parseFloat(document.getElementById('reportCoords').dataset.lon || DEFAULT_LON);
             const reporterName = getStoredUsername();
+            const deviceUuid = getDeviceUUID(); // ใช้รหัสอุปกรณ์ประจำเครื่อง
             const category = document.getElementById('reportCategory').value;
             const categoryText = document.getElementById('reportCategory').options[document.getElementById('reportCategory').selectedIndex].text;
             const detail = document.getElementById('reportDetail').value.trim() || 'ไม่มีรายละเอียด';
@@ -590,6 +602,7 @@
             const newReportItem = {
                 id: 'report-' + Date.now(),
                 userName: reporterName,
+                deviceUuid: deviceUuid,
                 category, categoryText, detail,
                 imageUrl: selectedImageBase64, lat, lon, timeStr
             };
@@ -598,6 +611,7 @@
                 if (window.sbClient) {
                     await window.sbClient.from('traffic-report-web').insert([{
                         usename: reporterName,
+                        device_uuid: deviceUuid, // บันทึกรหัสอุปกรณ์ลงคลาวด์
                         status: category,
                         detail: detail,
                         name: selectedImageBase64,
@@ -619,7 +633,7 @@
             }
         }
 
-        // ฟังก์ชันลบรายงาน (เฉพาะเจ้าของรายงาน) หรือแจ้งแอดมิน
+        // ฟังก์ชันลบรายงาน ตรวจสอบจาก deviceUuid ของเครื่องเท่านั้น
         async function deleteMyReport(reportId) {
             if (!confirm("คุณต้องการลบรายงานเหตุการณ์นี้ใช่หรือไม่?")) return;
             try {
@@ -669,7 +683,7 @@
         window.updateUserReportsFeed = function() {
             const feedContainer = document.getElementById('userReportsList');
             const badge = document.getElementById('reportCountBadge');
-            const currentLoggedInUser = getStoredUsername();
+            const currentDeviceUuid = getDeviceUUID(); // ดึงรหัสอุปกรณ์ปัจจุบัน
             let reports = window.userReports ? [...window.userReports] : [];
 
             reports.forEach(item => {
@@ -690,7 +704,9 @@
 
             feedContainer.innerHTML = reports.map(item => {
                 const distHtml = item.distanceKm !== null ? `<span class="bg-[#4a3b2f] text-amber-300 border border-[#7a6452] text-[10px] px-1.5 py-0.5 rounded">${item.distanceKm < 1 ? (item.distanceKm * 1000).toFixed(0) + ' ม.' : item.distanceKm.toFixed(1) + ' กม.'}</span>` : '';
-                const isMyReport = item.userName.toLowerCase() === currentLoggedInUser.toLowerCase();
+                
+                // ตรวจสอบสิทธิ์ความเป็นเจ้าของจาก deviceUuid หรือสำรองด้วยชื่อกรณีข้อมูลเก่าไม่มีฟิลด์รหัสเครื่อง
+                const isMyReport = item.deviceUuid ? (item.deviceUuid === currentDeviceUuid) : (item.userName.toLowerCase() === getStoredUsername().toLowerCase());
                 
                 const actionButtonHtml = isMyReport 
                     ? `<button onclick="event.stopPropagation(); deleteMyReport('${item.id}')" class="bg-red-900/60 hover:bg-red-800 text-red-200 border border-red-700/50 text-[10px] px-2 py-1 rounded flex items-center gap-1"><i class="fa-solid fa-trash-can"></i> ลบของฉัน</button>`
